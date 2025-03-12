@@ -116,8 +116,17 @@ class VideoCaptionEditor:
         }
         
         self.apply_theme()         # Применяем тему
-        self.update_localization() # Обновляем локализацию
-        self.root.geometry("1280x800")
+        self.update_localization()   # Обновляем локализацию
+        
+        # Устанавливаем начальный размер окна и центруем его с уменьшенным верхним отступом
+        initial_width = 1280
+        initial_height = 800
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        x = (screen_width - initial_width) // 2
+        y = (screen_height - initial_height) // 4  # Верхний отступ уменьшен (25% от оставшегося пространства)
+        self.root.geometry(f"{initial_width}x{initial_height}+{x}+{y}")
+        
         self.root.drop_target_register(DND_FILES)
         self.root.dnd_bind('<<Drop>>', self.on_drop)
 
@@ -305,9 +314,33 @@ class VideoCaptionEditor:
                 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 cap.release()
+                # Расчёт размеров окна на основе видео и дополнительных отступов
                 window_width = width + 800 + 20
                 window_height = height + 400
-                self.root.geometry(f"{window_width}x{window_height}")
+                # Ограничение максимального размера окна 95% от разрешения экрана
+                screen_width = self.root.winfo_screenwidth()
+                screen_height = self.root.winfo_screenheight()
+                max_width = int(screen_width * 0.95)
+                max_height = int(screen_height * 0.95)
+                window_width = min(window_width, max_width)
+                window_height = min(window_height, max_height)
+                # Проверяем текущий отступ от нижней границы окна до нижней границы экрана
+                current_y = self.root.winfo_y()
+                current_height = self.root.winfo_height()
+                current_bottom_margin = screen_height - (current_y + current_height)
+                # Если текущий нижний отступ меньше 5% от высоты экрана, выполняем авто-выравнивание
+                if (current_bottom_margin / screen_height) < 0.05:
+                    new_y = (screen_height - window_height) // 4
+                else:
+                    new_y = current_y
+                # Горизонтальное положение сохраняется
+                current_x = self.root.winfo_x()
+                self.root.geometry(f"{window_width}x{window_height}+{current_x}+{new_y}")
+                # Выделяем первое видео в списке и загружаем его автоматически
+                self.video_listbox.selection_clear(0, tk.END)
+                self.video_listbox.selection_set(0)
+                self.video_listbox.activate(0)
+                self.on_video_select(None)
             self.show_hint()
         else:
             print(self.translations[self.current_language]['drop_folder_message'])
