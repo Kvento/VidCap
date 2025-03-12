@@ -1,0 +1,57 @@
+{
+    "ru": {
+        "language_name": "Русский",
+        "title": "VidCap v1.0",
+        "drop_folder_message": "Пожалуйста, перетащите папку.",
+        "language": "Язык",
+        "theme": "Тема",
+        "light_theme": "Светлая",
+        "dark_theme": "Тёмная",
+        "video_info": "Разрешение: {width}x{height} \nДлина: {total_frames} кадров\nFps: {fps}",
+        "drag_folder_hint": "Перетащите папку с видео сюда."
+    },
+    "en": {
+        "language_name": "English",
+        "title": "VidCap v1.0",
+        "drop_folder_message": "Please drag and drop a folder.",
+        "language": "Language",
+        "theme": "Theme",
+        "light_theme": "Light",
+        "dark_theme": "Dark",
+        "video_info": "Resolution: {width}x{height} \nLength: {total_frames} frames\nFps: {fps}",
+        "drag_folder_hint": "Drag and drop a folder with videos here."
+    },
+    "fr": {
+        "language_name": "Français",
+        "title": "VidCap v1.0",
+        "drop_folder_message": "Veuillez glisser et déposer un dossier.",
+        "language": "Langue",
+        "theme": "Thème",
+        "light_theme": "Clair",
+        "dark_theme": "Sombre",
+        "video_info": "Résolution : {width}x{height} \nLongueur : {total_frames} images\nFps : {fps}",
+        "drag_folder_hint": "Glissez et déposez un dossier avec des vidéos ici."
+    },
+    "de": {
+        "language_name": "Deutsch",
+        "title": "VidCap v1.0",
+        "drop_folder_message": "Bitte ziehen Sie einen Ordner hierher.",
+        "language": "Sprache",
+        "theme": "Thema",
+        "light_theme": "Hell",
+        "dark_theme": "Dunkel",
+        "video_info": "Auflösung: {width}x{height} \nLänge: {total_frames} Frames\nFps: {fps}",
+        "drag_folder_hint": "Ziehen Sie einen Ordner mit Videos hierher."
+    },
+    "zh": {
+        "language_name": "中国人",
+        "title": "VidCap v1.0",
+        "drop_folder_message": "请拖拽一个文件夹。",
+        "language": "语言",
+        "theme": "主题",
+        "light_theme": "浅色",
+        "dark_theme": "深色",
+        "video_info": "分辨率：{width}x{height} \n长度：{total_frames} 帧\nFps: {fps}",
+        "drag_folder_hint": "将包含视频的文件夹拖放到此处。"
+    }
+}
