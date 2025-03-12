@@ -1,6 +1,7 @@
-# VidCap
+# VidCap 
+![Preview](Icon/Icon_128.ico)
 
-VidCap (Video Caption Editor) is a utility for quickly editing video captions when preparing a dataset for fine-tuning video models. It allows users to load a folder with videos, select a video for playback, and edit the corresponding caption text directly within the window. Multiple languages and themes are supported, and user settings are saved for convenience between sessions.
+**VidCap** is a utility for quickly editing video captions when preparing a dataset for fine-tuning video models. It allows users to load a folder with videos, select a video for playback, and edit the corresponding caption text directly within the window. Multiple languages and themes are supported, and user settings are saved for convenience between sessions.
 
 ![Preview](Assets/Preview.gif)
 
