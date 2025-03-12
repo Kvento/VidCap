@@ -1,4 +1,4 @@
 
 
-python_embeded/libs/
-python_embeded/Lib
+python_embeded/libs/*
+python_embeded/Lib/*
