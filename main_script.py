@@ -1,12 +1,6 @@
 import sys
 import os
 import json
-
-# Указываем путь к папке libs
-current_dir = os.path.dirname(os.path.abspath(__file__))
-libs_path = os.path.join(current_dir, 'libs')
-sys.path.append(libs_path)
-
 import tkinter as tk
 from tkinter import ttk
 import cv2
@@ -14,29 +8,46 @@ from PIL import Image, ImageTk
 from tkinterdnd2 import *
 
 class VideoPlayer:
-    def __init__(self, video_path, canvas, root):
-        self.video_path = video_path
+    def __init__(self, file_path, canvas, root):
+        self.file_path = file_path
         self.canvas = canvas
         self.root = root
-        self.cap = cv2.VideoCapture(video_path)
-        self.playing = False
-        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        self.delay = int(1000 / self.fps) if self.fps > 0 else 30
-        self.original_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.original_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))  # Длина видео в кадрах
+        self.is_image = self.is_image_file(file_path)
+        if self.is_image:
+            self.image = cv2.imread(file_path)
+            self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+            self.original_width = self.image.shape[1]
+            self.original_height = self.image.shape[0]
+            self.total_frames = 1  # Для изображений
+            self.fps = 0  # Не применимо для изображений
+        else:
+            self.cap = cv2.VideoCapture(file_path)
+            self.playing = False
+            self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+            self.delay = int(1000 / self.fps) if self.fps > 0 else 30
+            self.original_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self.original_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    def is_image_file(self, file_path):
+        image_extensions = ('.jpg', '.png')
+        return file_path.lower().endswith(image_extensions)
 
     def play(self):
-        if not self.playing:
-            self.playing = True
-            self._play_video()
+        if self.is_image:
+            self._display_image()
+        else:
+            if not self.playing:
+                self.playing = True
+                self._play_video()
 
     def stop(self):
-        self.playing = False
-        self.release()
+        if not self.is_image:
+            self.playing = False
+            self.release()
 
     def release(self):
-        if self.cap.isOpened():
+        if not self.is_image and self.cap.isOpened():
             self.cap.release()
 
     def _resize_frame(self, frame, width, height):
@@ -59,41 +70,41 @@ class VideoPlayer:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             frame = self.cap.read()[1]
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        # Получаем текущий размер канваса
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
-        
-        # Масштабируем кадр
         frame = self._resize_frame(frame, canvas_width, canvas_height)
         image = Image.fromarray(frame)
         photo = ImageTk.PhotoImage(image)
-        
-        # Центрируем изображение
         self.canvas.delete("all")
         self.canvas.create_image(canvas_width // 2, canvas_height // 2, image=photo, anchor=tk.CENTER)
         self.canvas.photo = photo
         self.root.after(self.delay, self._play_video)
 
+    def _display_image(self):
+        # Проверяем, что канвас имеет актуальные размеры
+        if self.canvas.winfo_width() <= 1 or self.canvas.winfo_height() <= 1:
+            # Если размеры ещё не готовы, откладываем отображение
+            self.root.after(100, self._display_image)
+            return
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        frame = self._resize_frame(self.image, canvas_width, canvas_height)
+        image = Image.fromarray(frame)
+        photo = ImageTk.PhotoImage(image)
+        self.canvas.delete("all")
+        self.canvas.create_image(canvas_width // 2, canvas_height // 2, image=photo, anchor=tk.CENTER)
+        self.canvas.photo = photo
+
 class VideoCaptionEditor:
     def __init__(self, root):
         self.root = root
         self.player = None
-        
-        # Загрузка переводов из файла
         with open('translations.json', 'r', encoding='utf-8') as f:
             self.translations = json.load(f)
-        
-        # Определение пути к файлу настроек
         self.settings_file = 'settings.json'
-        
-        # Загрузка настроек
         self.load_settings()
-        
         self.video_folder = None
-        self.create_gui()  # Сначала создаём интерфейс
-        
-        # Определение тем
+        self.create_gui()
         self.themes = {
             'light': {
                 'background': 'white',
@@ -114,40 +125,33 @@ class VideoCaptionEditor:
                 'text_bg': '#1f2b38'
             }
         }
-        
-        self.apply_theme()         # Применяем тему
-        self.update_localization()   # Обновляем локализацию
-        
-        # Устанавливаем начальный размер окна и центруем его с уменьшенным верхним отступом
+        self.apply_theme()
+        self.update_localization()
         initial_width = 1280
         initial_height = 800
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x = (screen_width - initial_width) // 2
-        y = (screen_height - initial_height) // 4  # Верхний отступ уменьшен (25% от оставшегося пространства)
+        y = (screen_height - initial_height) // 4
         self.root.geometry(f"{initial_width}x{initial_height}+{x}+{y}")
-        
         self.root.drop_target_register(DND_FILES)
         self.root.dnd_bind('<<Drop>>', self.on_drop)
 
     def load_settings(self):
-        """Загрузка настроек из файла"""
         try:
             with open(self.settings_file, 'r', encoding='utf-8') as f:
                 settings = json.load(f)
                 self.current_language = settings.get('language', 'ru')
                 self.current_theme = settings.get('theme', 'light')
-                self.text_size = settings.get('text_size', 12)  # Размер шрифта для text_area
-                self.info_size = settings.get('info_size', 9)  # Размер шрифта для video_info_label
+                self.text_size = settings.get('text_size', 12)
+                self.info_size = settings.get('info_size', 9)
         except (FileNotFoundError, json.JSONDecodeError):
-            # Если файл не найден или повреждён, используем значения по умолчанию
             self.current_language = 'ru'
             self.current_theme = 'light'
             self.text_size = 12
             self.info_size = 9
 
     def save_settings(self):
-        """Сохранение настроек в файл"""
         settings = {
             'language': self.current_language,
             'theme': self.current_theme,
@@ -160,70 +164,50 @@ class VideoCaptionEditor:
     def create_gui(self):
         self.sidebar = tk.Frame(self.root, width=200, relief=tk.SUNKEN, borderwidth=1)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
-
         self.scrollbar = tk.Scrollbar(self.sidebar, orient=tk.VERTICAL)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
         self.video_listbox = tk.Listbox(self.sidebar, width=40, height=20, yscrollcommand=self.scrollbar.set)
         self.video_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.video_listbox.bind('<<ListboxSelect>>', self.on_video_select)
-
         self.scrollbar.config(command=self.video_listbox.yview)
-
         self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=34)
-
         self.video_canvas = tk.Canvas(self.main_frame, bg="black")
         self.video_canvas.pack(fill=tk.BOTH, expand=True)
-
         self.hint_label = tk.Label(self.video_canvas, text="", font=("Arial", 16), fg="white", bg="black")
-
         self.info_frame = tk.Frame(self.main_frame)
         self.info_frame.pack(pady=(5, 0))
-
         self.video_info_label = tk.Label(self.info_frame, text="", font=("Arial", self.info_size), anchor=tk.W, justify=tk.LEFT)
         self.video_info_label.pack(side=tk.LEFT)
-
         self.text_area = tk.Text(self.main_frame, height=0, wrap=tk.WORD, font=("Arial", self.text_size))
         self.text_area.pack(fill=tk.BOTH, expand=True, pady=5)
         self.text_area.bind('<KeyRelease>', self.save_text)
-
-        # Кнопка настроек
         self.settings_button = tk.Button(self.root, text="⚙", command=self.show_settings_menu)
         self.settings_button.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
-        
-        # Кнопка "+"
         self.increase_size_button = tk.Button(self.root, text="➕", command=self.increase_text_size)
         self.increase_size_button.place(relx=0.99, rely=0.0, anchor="ne", x=-35, y=5)
-
-        # Кнопка "−"
         self.decrease_size_button = tk.Button(self.root, text="➖", command=self.decrease_text_size)
         self.decrease_size_button.place(relx=0.99, rely=0.0, anchor="ne", x=-65, y=5)
-
         self.show_hint()
 
     def increase_text_size(self):
-        """Увеличение размера шрифта"""
         self.text_size += 1
         self.info_size += 1
         self.update_text_sizes()
         self.save_settings()
 
     def decrease_text_size(self):
-        """Уменьшение размера шрифта"""
-        if self.text_size > 10 and self.info_size > 1:  # Ограничиваем минимальный размер
+        if self.text_size > 10 and self.info_size > 1:
             self.text_size -= 1
             self.info_size -= 1
             self.update_text_sizes()
             self.save_settings()
 
     def update_text_sizes(self):
-        """Обновление размеров шрифта в интерфейсе"""
         self.text_area.config(font=("Arial", self.text_size))
         self.video_info_label.config(font=("Arial", self.info_size))
 
     def apply_theme(self):
-        """Применение выбранной темы ко всем элементам интерфейса"""
         theme = self.themes[self.current_theme]
         self.root.config(bg=theme['background'])
         self.sidebar.config(bg=theme['background'], highlightbackground=theme['border'], highlightthickness=1)
@@ -256,35 +240,35 @@ class VideoCaptionEditor:
     def update_video_info(self):
         if self.player:
             lang = self.translations[self.current_language]
-            info_text = lang["video_info"].format(
-                width=self.player.original_width,
-                height=self.player.original_height,
-                total_frames=self.player.total_frames,
-                fps=self.player.fps
-            )
+            if self.player.is_image:
+                info_text = lang["image_info"].format(
+                    width=self.player.original_width,
+                    height=self.player.original_height
+                )
+            else:
+                info_text = lang["video_info"].format(
+                    width=self.player.original_width,
+                    height=self.player.original_height,
+                    total_frames=self.player.total_frames,
+                    fps=self.player.fps
+                )
             self.video_info_label.config(text=info_text)
         else:
             self.video_info_label.config(text="")
 
     def show_settings_menu(self):
-        """Динамическое создание меню настроек на основе translations.json"""
         menu = tk.Menu(self.root, tearoff=0)
-        
-        # Подменю "Язык"
         lang_menu = tk.Menu(menu, tearoff=0)
         for lang_code in self.translations.keys():
             lang_name = self.translations[lang_code].get('language_name', lang_code)
             lang_menu.add_command(label=lang_name, command=lambda lc=lang_code: self.set_language(lc))
         menu.add_cascade(label=self.translations[self.current_language]['language'], menu=lang_menu)
-        
-        # Подменю "Тема"
         theme_menu = tk.Menu(menu, tearoff=0)
         theme_menu.add_command(label=self.translations[self.current_language]['light_theme'], 
                                command=lambda: self.set_theme('light'))
         theme_menu.add_command(label=self.translations[self.current_language]['dark_theme'], 
                                command=lambda: self.set_theme('dark'))
         menu.add_cascade(label=self.translations[self.current_language]['theme'], menu=theme_menu)
-        
         try:
             menu.tk_popup(self.settings_button.winfo_rootx(),
                           self.settings_button.winfo_rooty() + self.settings_button.winfo_height())
@@ -292,16 +276,14 @@ class VideoCaptionEditor:
             menu.grab_release()
 
     def set_language(self, lang_code):
-        """Установка языка и сохранение настроек"""
         self.current_language = lang_code
         self.update_localization()
-        self.save_settings()  # Сохраняем настройки после изменения языка
+        self.save_settings()
 
     def set_theme(self, theme):
-        """Установка темы и сохранение настроек"""
         self.current_theme = theme
         self.apply_theme()
-        self.save_settings()  # Сохраняем настройки после изменения темы
+        self.save_settings()
 
     def on_drop(self, event):
         path = event.data
@@ -309,45 +291,50 @@ class VideoCaptionEditor:
             self.video_folder = path
             self.load_videos()
             if self.video_files:
-                first_video = os.path.join(self.video_folder, self.video_files[0])
-                cap = cv2.VideoCapture(first_video)
-                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                cap.release()
-                # Расчёт размеров окна на основе видео и дополнительных отступов
+                first_file = os.path.join(self.video_folder, self.video_files[0])
+                if VideoPlayer(first_file, self.video_canvas, self.root).is_image:
+                    img = cv2.imread(first_file)
+                    width = img.shape[1]
+                    height = img.shape[0]
+                else:
+                    cap = cv2.VideoCapture(first_file)
+                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    cap.release()
                 window_width = width + 800 + 20
                 window_height = height + 400
-                # Ограничение максимального размера окна 95% от разрешения экрана
                 screen_width = self.root.winfo_screenwidth()
                 screen_height = self.root.winfo_screenheight()
                 max_width = int(screen_width * 0.95)
                 max_height = int(screen_height * 0.95)
                 window_width = min(window_width, max_width)
                 window_height = min(window_height, max_height)
-                # Проверяем текущий отступ от нижней границы окна до нижней границы экрана
                 current_y = self.root.winfo_y()
                 current_height = self.root.winfo_height()
                 current_bottom_margin = screen_height - (current_y + current_height)
-                # Если текущий нижний отступ меньше 5% от высоты экрана, выполняем авто-выравнивание
                 if (current_bottom_margin / screen_height) < 0.05:
                     new_y = (screen_height - window_height) // 4
                 else:
                     new_y = current_y
-                # Горизонтальное положение сохраняется
                 current_x = self.root.winfo_x()
                 self.root.geometry(f"{window_width}x{window_height}+{current_x}+{new_y}")
-                # Выделяем первое видео в списке и загружаем его автоматически
-                self.video_listbox.selection_clear(0, tk.END)
-                self.video_listbox.selection_set(0)
-                self.video_listbox.activate(0)
-                self.on_video_select(None)
+                self.root.update_idletasks()  # Обновляем задачи интерфейса
+                # Откладываем выбор первого файла и отображение превью
+                self.root.after(100, self.select_first_file)
             self.show_hint()
         else:
             print(self.translations[self.current_language]['drop_folder_message'])
 
+    def select_first_file(self):
+        self.video_listbox.selection_clear(0, tk.END)
+        self.video_listbox.selection_set(0)
+        self.video_listbox.activate(0)
+        self.on_video_select(None)
+
     def load_videos(self):
         if self.video_folder:
-            self.video_files = [f for f in os.listdir(self.video_folder) if f.endswith('.mp4')]
+            supported_formats = ('.mp4', '.mov', '.avi', '.jpg', '.png')
+            self.video_files = [f for f in os.listdir(self.video_folder) if f.lower().endswith(supported_formats)]
             self.video_listbox.delete(0, tk.END)
             for video in self.video_files:
                 self.video_listbox.insert(tk.END, video)
@@ -356,20 +343,15 @@ class VideoCaptionEditor:
         selection = self.video_listbox.curselection()
         if not selection:
             return
-
-        video_name = self.video_listbox.get(selection[0])
-        video_path = os.path.join(self.video_folder, video_name)
-
+        file_name = self.video_listbox.get(selection[0])
+        file_path = os.path.join(self.video_folder, file_name)
         if self.player:
             self.player.stop()
-
-        self.player = VideoPlayer(video_path, self.video_canvas, self.root)
+        self.player = VideoPlayer(file_path, self.video_canvas, self.root)
         self.player.play()
-
         self.update_video_info()
         self.show_hint()
-
-        txt_path = os.path.join(self.video_folder, video_name.replace('.mp4', '.txt'))
+        txt_path = os.path.join(self.video_folder, os.path.splitext(file_name)[0] + '.txt')
         self.load_text(txt_path)
 
     def load_text(self, txt_path):
@@ -395,4 +377,4 @@ if __name__ == "__main__":
     app = VideoCaptionEditor(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop()
-    sys.exit(0)  # Завершаем процесс Python после закрытия окна
+    sys.exit(0)
