@@ -132,7 +132,7 @@ class VideoCaptionEditor:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x = (screen_width - initial_width) // 2
-        y = (screen_height - initial_height) // 4
+        y = (screen_height - initial_height) // 14
         self.root.geometry(f"{initial_width}x{initial_height}+{x}+{y}")
         self.root.drop_target_register(DND_FILES)
         self.root.dnd_bind('<<Drop>>', self.on_drop)
@@ -305,15 +305,15 @@ class VideoCaptionEditor:
                 window_height = height + 400
                 screen_width = self.root.winfo_screenwidth()
                 screen_height = self.root.winfo_screenheight()
-                max_width = int(screen_width * 0.95)
-                max_height = int(screen_height * 0.95)
+                max_width = int(screen_width * 0.90)
+                max_height = int(screen_height * 0.90)
                 window_width = min(window_width, max_width)
                 window_height = min(window_height, max_height)
                 current_y = self.root.winfo_y()
                 current_height = self.root.winfo_height()
                 current_bottom_margin = screen_height - (current_y + current_height)
-                if (current_bottom_margin / screen_height) < 0.05:
-                    new_y = (screen_height - window_height) // 4
+                if (current_bottom_margin / screen_height) < 0.25:
+                    new_y = (screen_height - window_height) // 10
                 else:
                     new_y = current_y
                 current_x = self.root.winfo_x()
