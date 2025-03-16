@@ -4,24 +4,35 @@ import json
 import tkinter as tk
 from tkinter import ttk
 import cv2
+import numpy as np
 from PIL import Image, ImageTk
 from tkinterdnd2 import *
 
 class VideoPlayer:
     def __init__(self, file_path, canvas, root):
-        self.file_path = file_path
+        self.file_path = os.path.normpath(file_path)  # Нормализуем путь
         self.canvas = canvas
         self.root = root
-        self.is_image = self.is_image_file(file_path)
+        self.is_image = self.is_image_file(self.file_path)
         if self.is_image:
-            self.image = cv2.imread(file_path)
-            self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
-            self.original_width = self.image.shape[1]
-            self.original_height = self.image.shape[0]
-            self.total_frames = 1  # Для изображений
-            self.fps = 0  # Не применимо для изображений
+            try:
+                # Читаем изображение в байты и декодируем через OpenCV
+                with open(self.file_path, 'rb') as f:
+                    img_data = np.frombuffer(f.read(), np.uint8)
+                self.image = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
+                if self.image is None:
+                    raise ValueError("Не удалось декодировать изображение")
+                self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+                self.original_width, self.original_height = self.image.shape[1], self.image.shape[0]
+                self.total_frames = 1
+                self.fps = 0
+            except Exception as e:
+                raise ValueError(f"Ошибка загрузки изображения {self.file_path}: {e}")
         else:
-            self.cap = cv2.VideoCapture(file_path)
+            # Для видео используем VideoCapture с диагностикой
+            self.cap = cv2.VideoCapture(self.file_path)
+            if not self.cap.isOpened():
+                raise ValueError(f"Не удалось открыть видео {self.file_path}")
             self.playing = False
             self.fps = self.cap.get(cv2.CAP_PROP_FPS)
             self.delay = int(1000 / self.fps) if self.fps > 0 else 30
@@ -168,7 +179,6 @@ class VideoCaptionEditor:
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         self.scrollbar = tk.Scrollbar(self.sidebar, orient=tk.VERTICAL)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        # Исправление: добавлен параметр exportselection=0
         self.video_listbox = tk.Listbox(self.sidebar, width=40, height=20, yscrollcommand=self.scrollbar.set, exportselection=0)
         self.video_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.video_listbox.bind('<<ListboxSelect>>', self.on_video_select)
@@ -340,38 +350,44 @@ class VideoCaptionEditor:
             path = path[1:-1]  # Убираем фигурные скобки, если они есть
         path = path.strip()  # Убираем ведущие и конечные пробелы
         if os.path.isdir(path):
-            self.video_folder = path
+            self.video_folder = os.path.normpath(path)  # Нормализуем путь к папке
             self.load_videos()
             if self.video_files:
                 first_file = os.path.join(self.video_folder, self.video_files[0])
-                if VideoPlayer(first_file, self.video_canvas, self.root).is_image:
-                    img = cv2.imread(first_file)
-                    width = img.shape[1]
-                    height = img.shape[0]
-                else:
-                    cap = cv2.VideoCapture(first_file)
-                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    cap.release()
-                window_width = width + 800 + 20
-                window_height = height + 400
-                screen_width = self.root.winfo_screenwidth()
-                screen_height = self.root.winfo_screenheight()
-                max_width = int(screen_width * 0.90)
-                max_height = int(screen_height * 0.90)
-                window_width = min(window_width, max_width)
-                window_height = min(window_height, max_height)
-                current_y = self.root.winfo_y()
-                current_height = self.root.winfo_height()
-                current_bottom_margin = screen_height - (current_y + current_height)
-                if (current_bottom_margin / screen_height) < 0.25:
-                    new_y = (screen_height - window_height) // 10
-                else:
-                    new_y = current_y
-                current_x = self.root.winfo_x()
-                self.root.geometry(f"{window_width}x{window_height}+{current_x}+{new_y}")
-                self.root.update_idletasks()
-                self.root.after(100, self.select_first_file)
+                try:
+                    if VideoPlayer(first_file, self.video_canvas, self.root).is_image:
+                        with open(first_file, 'rb') as f:
+                            img_data = np.frombuffer(f.read(), np.uint8)
+                        img = cv2.imdecode(img_data, cv2.IMREAD_COLOR)
+                        width, height = img.shape[1], img.shape[0]
+                    else:
+                        cap = cv2.VideoCapture(first_file)
+                        if not cap.isOpened():
+                            raise ValueError(f"Не удалось открыть видео {first_file}")
+                        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        cap.release()
+                    window_width = width + 800 + 20
+                    window_height = height + 400
+                    screen_width = self.root.winfo_screenwidth()
+                    screen_height = self.root.winfo_screenheight()
+                    max_width = int(screen_width * 0.90)
+                    max_height = int(screen_height * 0.90)
+                    window_width = min(window_width, max_width)
+                    window_height = min(window_height, max_height)
+                    current_y = self.root.winfo_y()
+                    current_height = self.root.winfo_height()
+                    current_bottom_margin = screen_height - (current_y + current_height)
+                    if (current_bottom_margin / screen_height) < 0.25:
+                        new_y = (screen_height - window_height) // 10
+                    else:
+                        new_y = current_y
+                    current_x = self.root.winfo_x()
+                    self.root.geometry(f"{window_width}x{window_height}+{current_x}+{new_y}")
+                    self.root.update_idletasks()
+                    self.root.after(100, self.select_first_file)
+                except Exception as e:
+                    print(f"Ошибка при обработке файла {first_file}: {e}")
             self.show_hint()
         else:
             print(self.translations[self.current_language]['drop_folder_message'])
@@ -396,27 +412,38 @@ class VideoCaptionEditor:
             return
         file_name = self.video_listbox.get(selection[0])
         file_path = os.path.join(self.video_folder, file_name)
+        file_path = os.path.normpath(file_path)  # Нормализуем путь к файлу
         if self.player:
             self.player.stop()
-        self.player = VideoPlayer(file_path, self.video_canvas, self.root)
-        self.player.play()
-        self.update_video_info()
-        self.show_hint()
-        txt_path = os.path.join(self.video_folder, os.path.splitext(file_name)[0] + '.txt')
-        self.load_text(txt_path)
+        try:
+            self.player = VideoPlayer(file_path, self.video_canvas, self.root)
+            self.player.play()
+            self.update_video_info()
+            self.show_hint()
+            txt_path = os.path.join(self.video_folder, os.path.splitext(file_name)[0] + '.txt')
+            txt_path = os.path.normpath(txt_path)  # Нормализуем путь к текстовому файлу
+            self.load_text(txt_path)
+        except Exception as e:
+            print(f"Ошибка при загрузке файла {file_path}: {e}")
 
     def load_text(self, txt_path):
         self.current_txt_path = txt_path
         self.text_area.delete(1.0, tk.END)
         if os.path.exists(txt_path):
-            with open(txt_path, 'r', encoding='utf-8') as f:
-                self.text_area.insert(tk.END, f.read())
+            try:
+                with open(txt_path, 'r', encoding='utf-8') as f:
+                    self.text_area.insert(tk.END, f.read())
+            except Exception as e:
+                print(f"Ошибка при загрузке текста {txt_path}: {e}")
 
     def save_text(self, event):
         if hasattr(self, 'current_txt_path'):
             text_content = self.text_area.get(1.0, tk.END).strip()
-            with open(self.current_txt_path, 'w', encoding='utf-8') as f:
-                f.write(text_content)
+            try:
+                with open(self.current_txt_path, 'w', encoding='utf-8') as f:
+                    f.write(text_content)
+            except Exception as e:
+                print(f"Ошибка при сохранении текста {self.current_txt_path}: {e}")
 
     def on_closing(self):
         if self.player:
