@@ -1,7 +1,7 @@
 {
     "ru": {
         "language_name": "Русский",
-        "title": "VidCap v1.0.2",
+        "title": "VidCap v1.0.3",
         "drop_folder_message": "Пожалуйста, перетащите папку.",
         "language": "Язык",
         "theme": "Тема",
@@ -9,11 +9,16 @@
         "dark_theme": "Тёмная",
         "video_info": "Разрешение: {width}x{height} \nДлина: {total_frames} кадров\nFps: {fps}",
         "image_info": "Разрешение: {width}x{height}",
-        "drag_folder_hint": "Перетащите папку с видео или изображениями сюда."
+        "drag_folder_hint": "Перетащите папку с видео или изображениями сюда.",
+        "copy": "Копировать",
+        "paste": "Вставить",
+        "cut": "Вырезать",
+        "undo": "Отменить",
+        "redo": "Вернуть"
     },
     "en": {
         "language_name": "English",
-        "title": "VidCap v1.0.2",
+        "title": "VidCap v1.0.3",
         "drop_folder_message": "Please drag and drop a folder.",
         "language": "Language",
         "theme": "Theme",
@@ -21,11 +26,16 @@
         "dark_theme": "Dark",
         "video_info": "Resolution: {width}x{height} \nLength: {total_frames} frames\nFps: {fps}",
         "image_info": "Resolution: {width}x{height}",
-        "drag_folder_hint": "Drag and drop a folder with videos or images here."
+        "drag_folder_hint": "Drag and drop a folder with videos or images here.",
+        "copy": "Copy",
+        "paste": "Paste",
+        "cut": "Cut",
+        "undo": "Undo",
+        "redo": "Redo"
     },
     "fr": {
         "language_name": "Français",
-        "title": "VidCap v1.0.2",
+        "title": "VidCap v1.0.3",
         "drop_folder_message": "Veuillez glisser et déposer un dossier.",
         "language": "Langue",
         "theme": "Thème",
@@ -33,11 +43,16 @@
         "dark_theme": "Sombre",
         "video_info": "Résolution : {width}x{height} \nLongueur : {total_frames} images\nFps : {fps}",
         "image_info": "Résolution : {width}x{height}",
-        "drag_folder_hint": "Glissez et déposez un dossier avec des vidéos ou des images ici."
+        "drag_folder_hint": "Glissez et déposez un dossier avec des vidéos ou des images ici.",
+        "copy": "Copier",
+        "paste": "Coller",
+        "cut": "Couper",
+        "undo": "Annuler",
+        "redo": "Rétablir"
     },
     "de": {
         "language_name": "Deutsch",
-        "title": "VidCap v1.0.2",
+        "title": "VidCap v1.0.3",
         "drop_folder_message": "Bitte ziehen Sie einen Ordner hierher.",
         "language": "Sprache",
         "theme": "Thema",
@@ -45,11 +60,16 @@
         "dark_theme": "Dunkel",
         "video_info": "Auflösung: {width}x{height} \nLänge: {total_frames} Frames\nFps: {fps}",
         "image_info": "Auflösung: {width}x{height}",
-        "drag_folder_hint": "Ziehen Sie einen Ordner mit Videos oder Bildern hierher."
+        "drag_folder_hint": "Ziehen Sie einen Ordner mit Videos oder Bildern hierher.",
+        "copy": "Kopieren",
+        "paste": "Einfügen",
+        "cut": "Ausschneiden",
+        "undo": "Rückgängig",
+        "redo": "Wiederherstellen"
     },
     "zh": {
         "language_name": "中国人",
-        "title": "VidCap v1.0.2",
+        "title": "VidCap v1.0.3",
         "drop_folder_message": "请拖拽一个文件夹。",
         "language": "语言",
         "theme": "主题",
@@ -57,6 +77,11 @@
         "dark_theme": "深色",
         "video_info": "分辨率：{width}x{height} \n长度：{total_frames} 帧\nFps: {fps}",
         "image_info": "分辨率：{width}x{height}",
-        "drag_folder_hint": "将包含视频或图像的文件夹拖放到此处。"
+        "drag_folder_hint": "将包含视频或图像的文件夹拖放到此处。",
+        "copy": "复制",
+        "paste": "粘贴",
+        "cut": "剪切",
+        "undo": "撤销",
+        "redo": "恢复"
     }
 }

@@ -81,9 +81,7 @@ class VideoPlayer:
         self.root.after(self.delay, self._play_video)
 
     def _display_image(self):
-        # Проверяем, что канвас имеет актуальные размеры
         if self.canvas.winfo_width() <= 1 or self.canvas.winfo_height() <= 1:
-            # Если размеры ещё не готовы, откладываем отображение
             self.root.after(100, self._display_image)
             return
         canvas_width = self.canvas.winfo_width()
@@ -113,7 +111,9 @@ class VideoCaptionEditor:
                 'button_fg': 'black',
                 'border': 'white',
                 'preview_bg': '#f0f0f0',
-                'text_bg': '#f0f0f0'
+                'text_bg': '#f0f0f0',
+                'select_bg': '#c0c0c0',  # Цвет фона выделения для светлой темы
+                'select_fg': 'black'     # Цвет текста выделения для светлой темы
             },
             'dark': {
                 'background': '#2c3e50',
@@ -122,7 +122,9 @@ class VideoCaptionEditor:
                 'button_fg': 'white',
                 'border': '#2c3e50',
                 'preview_bg': '#1f2b38',
-                'text_bg': '#1f2b38'
+                'text_bg': '#1f2b38',
+                'select_bg': '#4a708b',  # Цвет фона выделения для тёмной темы
+                'select_fg': 'white'     # Цвет текста выделения для тёмной темы
             }
         }
         self.apply_theme()
@@ -166,7 +168,8 @@ class VideoCaptionEditor:
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         self.scrollbar = tk.Scrollbar(self.sidebar, orient=tk.VERTICAL)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.video_listbox = tk.Listbox(self.sidebar, width=40, height=20, yscrollcommand=self.scrollbar.set)
+        # Исправление: добавлен параметр exportselection=0
+        self.video_listbox = tk.Listbox(self.sidebar, width=40, height=20, yscrollcommand=self.scrollbar.set, exportselection=0)
         self.video_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.video_listbox.bind('<<ListboxSelect>>', self.on_video_select)
         self.scrollbar.config(command=self.video_listbox.yview)
@@ -179,7 +182,7 @@ class VideoCaptionEditor:
         self.info_frame.pack(pady=(5, 0))
         self.video_info_label = tk.Label(self.info_frame, text="", font=("Arial", self.info_size), anchor=tk.W, justify=tk.LEFT)
         self.video_info_label.pack(side=tk.LEFT)
-        self.text_area = tk.Text(self.main_frame, height=0, wrap=tk.WORD, font=("Arial", self.text_size))
+        self.text_area = tk.Text(self.main_frame, height=0, wrap=tk.WORD, font=("Arial", self.text_size), undo=True)
         self.text_area.pack(fill=tk.BOTH, expand=True, pady=5)
         self.text_area.bind('<KeyRelease>', self.save_text)
         self.settings_button = tk.Button(self.root, text="⚙", command=self.show_settings_menu)
@@ -189,6 +192,45 @@ class VideoCaptionEditor:
         self.decrease_size_button = tk.Button(self.root, text="➖", command=self.decrease_text_size)
         self.decrease_size_button.place(relx=0.99, rely=0.0, anchor="ne", x=-65, y=5)
         self.show_hint()
+        self.create_context_menu()
+        # Привязка горячих клавиш для Undo и Redo
+        self.text_area.bind('<Control-z>', self.undo_text)
+        self.text_area.bind('<Control-Shift-Z>', self.redo_text)
+
+    def undo_text(self, event=None):
+        try:
+            self.text_area.edit_undo()
+        except tk.TclError:
+            pass  # Игнорируем ошибку, если Undo недоступно
+
+    def redo_text(self, event=None):
+        try:
+            self.text_area.edit_redo()
+        except tk.TclError:
+            pass  # Игнорируем ошибку, если Redo недоступно
+
+    def create_context_menu(self):
+        lang = self.translations[self.current_language]
+        self.context_menu = tk.Menu(self.root, tearoff=0)
+        self.context_menu.add_command(label=lang["undo"], command=self.undo_text)
+        self.context_menu.add_command(label=lang["redo"], command=self.redo_text)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label=lang["copy"], command=self.copy_text)
+        self.context_menu.add_command(label=lang["paste"], command=self.paste_text)
+        self.context_menu.add_command(label=lang["cut"], command=self.cut_text)
+        self.text_area.bind("<Button-3>", self.show_context_menu)
+
+    def show_context_menu(self, event):
+        self.context_menu.tk_popup(event.x_root, event.y_root)
+
+    def copy_text(self):
+        self.text_area.event_generate("<<Copy>>")
+
+    def paste_text(self):
+        self.text_area.event_generate("<<Paste>>")
+
+    def cut_text(self):
+        self.text_area.event_generate("<<Cut>>")
 
     def increase_text_size(self):
         self.text_size += 1
@@ -211,7 +253,13 @@ class VideoCaptionEditor:
         theme = self.themes[self.current_theme]
         self.root.config(bg=theme['background'])
         self.sidebar.config(bg=theme['background'], highlightbackground=theme['border'], highlightthickness=1)
-        self.video_listbox.config(bg=theme['background'], fg=theme['text'])
+        self.video_listbox.config(
+            bg=theme['background'],
+            fg=theme['text'],
+            selectbackground=theme['select_bg'],
+            selectforeground=theme['select_fg'],
+            activestyle='none'  # Убираем пунктирную рамку при фокусе
+        )
         self.main_frame.config(bg=theme['background'], highlightbackground=theme['border'], highlightthickness=1)
         self.video_canvas.config(bg=theme['preview_bg'])
         self.hint_label.config(bg=theme['preview_bg'], fg=theme['text'])
@@ -228,6 +276,7 @@ class VideoCaptionEditor:
         self.root.title(lang['title'])
         self.update_video_info()
         self.show_hint()
+        self.create_context_menu()
 
     def show_hint(self):
         if self.video_folder is None:
@@ -287,6 +336,9 @@ class VideoCaptionEditor:
 
     def on_drop(self, event):
         path = event.data
+        if path.startswith('{') and path.endswith('}'):
+            path = path[1:-1]  # Убираем фигурные скобки, если они есть
+        path = path.strip()  # Убираем ведущие и конечные пробелы
         if os.path.isdir(path):
             self.video_folder = path
             self.load_videos()
@@ -318,8 +370,7 @@ class VideoCaptionEditor:
                     new_y = current_y
                 current_x = self.root.winfo_x()
                 self.root.geometry(f"{window_width}x{window_height}+{current_x}+{new_y}")
-                self.root.update_idletasks()  # Обновляем задачи интерфейса
-                # Откладываем выбор первого файла и отображение превью
+                self.root.update_idletasks()
                 self.root.after(100, self.select_first_file)
             self.show_hint()
         else:
